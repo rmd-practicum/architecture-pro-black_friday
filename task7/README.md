@@ -46,16 +46,19 @@ db.createCollection(
         bsonType: "object",
         title: "Product object validation",
         properties: {
-          name:       { bsonType: "string" }
-          category:   { bsonType: "string" }
-          price:      { bsonType: "decimal" }
-          stock_per_zone: { 
-            bsonType: "object",
-            properties: {
-              zone:     { bsonType: "string" },
-              quantity: { bsonType: "int" }
+          name:       { bsonType: "string" },
+          category:   { bsonType: "string" },
+          price:      { bsonType: "decimal" },
+          stock_per_zone: {
+            bsonType: "array",
+              items: {
+              bsonType: "object",
+              properties: {
+                zone:     { bsonType: "string" },
+                quantity: { bsonType: "int" }
+              }
             }
-          }
+          },
           attributes: {
             bsonType: "object",
             properties: {
@@ -69,8 +72,7 @@ db.createCollection(
   }
 );
 
-db.products.createIndex({ "category": 1 })
-db.products.createIndex({ "price": 1 })
+db.products.createIndex({ "category": 1, "price": 1 })
 ```
 
 ### carts
@@ -107,4 +109,36 @@ db.createCollection(
 
 db.carts.createIndex({ "session_id": 1, "status": 1 })
 db.carts.createIndex({ "user_id": 1, "status": 1 })
+```
+
+## Шардирование
+
+### orders
+
+Используем идентификатор клиента (`client_id`) в качестве ключа. Это позволит получать историю заказов каждого клиента с одного шарда.
+
+Стратегия — хэшированное шардирование. Она позволит равномерно распределять заказы пользователей по шардам. Риск появления горячих шардов есть, но он достаточно низок: вероятно, что отдельные пользователи с большим количеством заказов будут распределены по шардам равномерно.
+
+```
+sh.shardCollection("db.orders", { "client_id": "hashed" })
+```
+
+### products
+
+Используем идентификатор товара в качестве ключа. Недостаток подхода — получение данных при поиске по категориям и диапазону цен будет происходить с нескольких шардов.
+
+Стратегия — хэшированное шардирование.
+
+```
+sh.shardCollection("db.products", { "_id": "hashed" })
+```
+
+### carts
+
+Используем идентификатор корзины в качестве ключа. Это позволит равномерно распределить данные. Поскольку в один момент времени пользователь работает с одной корзиной, нет необходимости учитывать идентификатор пользователя при шардировании.
+
+Стратегия — хэшированное шардирование.
+
+```
+sh.shardCollection("db.carts", { "_id": "hashed" })
 ```
