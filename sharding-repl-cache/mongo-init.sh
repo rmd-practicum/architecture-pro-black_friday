@@ -46,7 +46,7 @@ rs.initiate(
 );
 EOF
 
-echo "FIXME: WAITING..."
+echo "HACK: WAITING 30s FOR THE CLUSTER TO INITIALIZE..."
 
 sleep 30
 
