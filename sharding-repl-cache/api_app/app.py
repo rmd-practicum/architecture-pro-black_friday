@@ -85,7 +85,14 @@ async def root():
     for collection_name in collection_names:
         collection = db.get_collection(collection_name)
         collections[collection_name] = {
-            "documents_count": await collection.count_documents({})
+            "documents_count": await collection.count_documents({}),
+            "shards_documents_count": {
+                s["shard"]: s["storageStats"]["count"]
+                async for s in collection.aggregate(
+                    [{"$collStats": {"storageStats": {}}}]
+                )
+                if "shard" in s
+            },
         }
     try:
         replica_status = await client.admin.command("replSetGetStatus")
